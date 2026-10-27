@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Demo Catálogo",
+    "slug": "demo-catalogo-produtos",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "democatalogo",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "web": {
+      "output": "single"
+    },
+    "plugins": [
+      "expo-status-bar"
+    ]
+  }
+}
