@@ -28,3 +28,18 @@ export async function criarProduto(produto: NovoProduto): Promise<Produto> {
   if (!resposta.ok) throw new Error(`Erro ${resposta.status}`);
   return resposta.json();
 }
+
+export async function editProduto(id: string, produto: Produto): Promise<Produto> {
+  const resposta = await fetch(`${API_URL}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json'},
+    body: JSON.stringify(produto)
+  });
+  if (!resposta.ok) throw new Error (`Erro ${resposta.status}`);
+  return resposta.json();
+}
+
+export async function deleteProduto(id: string): Promise<void>{
+  const resposta = await fetch(`${API_URL}?produtoId=${id}`, {method: 'DELETE'});
+  if (!resposta.ok) throw new Error(`Erro ${resposta.status}`);
+}

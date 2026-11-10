@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,7 +54,7 @@ public class ProdutoService {
 
     public ProdutoResponseDTO update(UUID produtoId, ProdutoRequestDTO produto) {
         Produto produtoExistente = produtoRepository.findById(produtoId)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado"));
 
         produtoExistente.setNome(produto.nome());
         produtoExistente.setDescricao(produto.descricao());

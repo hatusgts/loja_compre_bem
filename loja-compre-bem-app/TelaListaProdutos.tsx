@@ -1,6 +1,8 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Keyboard,
   StyleSheet,
@@ -13,8 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { RootStackParamList } from './types';
-import type { Produto } from './types';
+import type { Produto, RootStackParamList } from './types';
 import { criarProduto, formatarPreco, getProdutos } from './produto-service';
 
 const CHAVE_FAVORITOS = '@compre_bem:favoritos';
@@ -29,6 +30,7 @@ function TelaListaProdutos({ navigation }: Props) {
   const [carregando, setCarregando] = useState(false);
   const [erroApi, setErroApi] = useState('');
   const [favoritos, setFavoritos] = useState<string[]>([]);
+  const ultimaRequisicao = useRef(0);
 
   useEffect(() => {
     AsyncStorage.getItem(CHAVE_FAVORITOS).then((salvo) => {
@@ -45,26 +47,35 @@ function TelaListaProdutos({ navigation }: Props) {
   }
 
   async function carregar(novaPagina: number, termo: string) {
+    const requisicao = ++ultimaRequisicao.current;
     setCarregando(true);
     setErroApi('');
     try {
       const resposta = await getProdutos(novaPagina, termo);
+      if (requisicao !== ultimaRequisicao.current) return;
       setProdutos((atual) => (novaPagina === 0 ? resposta.content : [...atual, ...resposta.content]));
       setPagina(novaPagina);
       setUltimaPagina(resposta.last);
     } catch {
-      setErroApi('Não foi possível carregar os produtos.');
+      if (requisicao !== ultimaRequisicao.current) return;
+      setErroApi('Não foi possível carregar os produtos. Verifique se a API está no ar e tente novamente.');
     } finally {
-      setCarregando(false);
+      if (requisicao === ultimaRequisicao.current) setCarregando(false);
     }
   }
 
-  useEffect(() => {
-    carregar(0, busca);
-  }, [busca]);
+  function tentarNovamente() {
+    carregar(produtos.length === 0 ? 0 : pagina + 1, busca);
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      carregar(0, busca);
+    }, [busca])
+  );
 
   function carregarMais() {
-    if (!carregando && !ultimaPagina) carregar(pagina + 1, busca);
+    if (!carregando && !ultimaPagina && !erroApi) carregar(pagina + 1, busca);
   }
 
   const [nome, setNome] = useState('');
@@ -173,11 +184,30 @@ function TelaListaProdutos({ navigation }: Props) {
         contentContainerStyle={styles.lista}
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          carregando ? null : (
-            <Text style={styles.vazio}>
-              {erroApi || `Nenhum produto encontrado para “${busca}”.`}
-            </Text>
+          carregando ? (
+            <ActivityIndicator style={styles.vazio} />
+          ) : erroApi ? (
+            <View>
+              <Text style={styles.vazio}>{erroApi}</Text>
+              <TouchableOpacity style={styles.botao} onPress={tentarNovamente}>
+                <Text style={styles.botaoTexto}>Tentar novamente</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Text style={styles.vazio}>Nenhum produto encontrado para “{busca}”.</Text>
           )
+        }
+        ListFooterComponent={
+          produtos.length === 0 ? null : carregando ? (
+            <ActivityIndicator style={styles.vazio} />
+          ) : erroApi ? (
+            <View>
+              <Text style={styles.vazio}>{erroApi}</Text>
+              <TouchableOpacity style={styles.botao} onPress={tentarNovamente}>
+                <Text style={styles.botaoTexto}>Tentar novamente</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
         }
         renderItem={({ item }) => (
           <TouchableOpacity
